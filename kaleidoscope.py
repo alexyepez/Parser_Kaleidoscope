@@ -100,10 +100,10 @@ class CPPCodeGenerator(STransformer):
     # Esta función procesa el cuerpo del programa
     def program(self, cpp_code):
         body_code = []
-        print(f'cpp_code: {cpp_code}')
+        print(f'cpp_code: {cpp_code.tail[0]}')
         input("Presione Enter para continuar...")
         if self.banderaArithmetic:
-            body_code.append(f"std::cout << ({cpp_code}) << std::endl;")
+            body_code.append(f"std::cout << ({cpp_code.tail[0]}) << std::endl;")
             self.banderaArithmetic = False
         elif self.banderaConditional:
             body_code.append(cpp_code)
@@ -154,7 +154,7 @@ def main():
     # Carga la gramática y parsea el archivo
     presentacion()
     with open('Kaleidoscope.g', 'r') as archivoGramatica:
-        with open('sumafuncion.kl', 'r') as archivoKL:
+        with open('arith.kl', 'r') as archivoKL:
             gramatica = plyplus.Grammar(archivoGramatica)
             codigoFuente = archivoKL.read()
             print("Código de entrada Kaleidoscope:")
