@@ -1,4 +1,7 @@
+int sumafuncion(int x, int y, int z) {
+x + y + z;
+}
 int main() {
-    std::cout << ((5 % 3) + 3 / 2 - (8 * 9)) << std::endl;
+    std::cout << sumafuncion(8, 3, 4) << std::endl;
     return 0;
 }

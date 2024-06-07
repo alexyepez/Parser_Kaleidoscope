@@ -1,0 +1,10 @@
+
+def factorial(n) {
+	if (n == 0) { 
+		1 
+	} else {
+		n * factorial(resta(n, 1))
+	}
+}
+
+factorial(6)

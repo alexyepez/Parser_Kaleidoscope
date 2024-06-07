@@ -16,15 +16,16 @@ class CPPCodeGenerator(STransformer):
         self.output = [] # Lista para almacenar el código C++ generado
         self.banderaArithmetic = False # Bandera para indicar si se está procesando una expresión aritmética
         self.banderaConditional = False # Bandera para indicar si se está procesando una estructura condicional
+        self.banderaFuncionDef = False # Bandera para indicar si se está procesando una definición de función
         self.banderaFunctioncall = False # Bandera para indicar si se está procesando una llamada a función
 
     # Esta función procesa las expresiones aritméticas
     def arithmetic_exp(self, tree):
         self.banderaArithmetic = True
         # Se obtienen los valores de los nodos del árbol
-        left = str(tree.tail[0])  # Primer parte de la expresión
+        left = self.evaluate(tree.tail[0])  # Primer parte de la expresión
         op = tree.tail[1].tail[0] # Operador, '+', '-', etc.
-        right = str(tree.tail[2]) # Segunda parte de la expresión
+        right = self.evaluate(tree.tail[2]) # Segunda parte de la expresión
 
         # Se genera código C++ para la operación aritmética
         cpp_code = f"{left} {op} {right}"
@@ -34,7 +35,7 @@ class CPPCodeGenerator(STransformer):
     # Esta función procesa las expresiones de asignación que contienen paréntesis
     def parexpression(self, tree):
         # Se evalúa la expresión dentro de los paréntesis y se devuelve el resultado.
-        exp_interna = self.process_expression(tree.tail[0])
+        exp_interna = tree.tail[0]
         return f"({exp_interna})"
     
     def number(self, tree):
@@ -42,8 +43,6 @@ class CPPCodeGenerator(STransformer):
 
     def variable(self, tree):
         nombre_variable = tree.tail[0].tail[0]
-        print(f'nombre_variable: {nombre_variable}')
-        input("Presione Enter para continuar...")
         return nombre_variable
     
 
@@ -52,19 +51,32 @@ class CPPCodeGenerator(STransformer):
         func_name = tree.tail[0].tail[0]  # Nombre de la función
         # Ya que no hay que no hay tipos explícitos en Kaleidoscope
         # Se asumen los parámetros enteros por simplicidad
-        parametros = [parametro for parametro in tree.tail[1].tail]
-        body = self.ensure_semicolon(str(tree.tail[2]))  # Evalúa el cuerpo de la función
-        cpp_code = f"int {func_name}({', '.join(f'int {param}' for param in parametros)}) {{\n{body}\n}}"
+        # Se recolentan parámetros, asumiendo que están en nodos sucesivos tras el nombre
+        params = []
+        for parametro in tree.tail:
+            if hasattr(parametro, 'head') and parametro.head == 'parameter':
+                params.append(f"int {parametro.tail[0].tail[0]}")  # Asume que los parámetros son de tipo entero
+        
+        # Se procesa el cuerpo de la función
+        body = self.ensure_semicolon(tree.tail[-1])  # Se asegura que el cuerpo termine en ';'
+
+        # Se genera el código C++ para la definición de la función
+        cpp_code = f"int {func_name}({', '.join(params)}) {{\n{body}\n}}"
         self.output.append(cpp_code)
     
     # Esta función procesa las llamadas a funciones
     def functioncall(self, tree):
         self.banderaFunctioncall = True
         nombre_funcion = tree.tail[0].tail[0]  # Nombre de la función
-        argumentos = [argumento for argumento in tree.tail[1]]
-        cpp_code = f"{nombre_funcion}({', '.join(argumentos)});"
-        print(f'cpp_code: {cpp_code}')
-        input("Presione Enter para continuar...")
+        # Recolectar argumentos, que están entre paréntesis después del nombre de la función
+        args = []
+        i = 1
+        while i < len(tree.tail):
+            args.append(tree.tail[i])  # Asume que los argumentos son numéricos
+            i += 1
+        
+        # Se genera el código C++ para la llamada a la función
+        cpp_code = f"{nombre_funcion}({', '.join(args)})"
         return cpp_code
     
     # Esta función procesa las expresiones de asignación
@@ -84,9 +96,9 @@ class CPPCodeGenerator(STransformer):
 
     # Esta función procesa las expresiones lógicas
     def logicalexpression(self, tree):
-        left = self.process_expression(tree.tail[0])
+        left = tree.tail[0]
         op = tree.tail[1].tail[0]
-        right = self.process_expression(tree.tail[2])
+        right = tree.tail[2]
         return f"{left} {op} {right}"
     
     # Esta función procesa los números y los devuelve
@@ -100,42 +112,35 @@ class CPPCodeGenerator(STransformer):
     # Esta función procesa el cuerpo del programa
     def program(self, cpp_code):
         body_code = []
-        print(f'cpp_code: {cpp_code.tail[0]}')
-        input("Presione Enter para continuar...")
-        if self.banderaArithmetic:
-            body_code.append(f"std::cout << ({cpp_code.tail[0]}) << std::endl;")
-            self.banderaArithmetic = False
-        elif self.banderaConditional:
-            body_code.append(cpp_code)
-            self.banderaConditional = False
-        elif self.banderaFunctioncall:
-            print(f'cpp_code: {cpp_code}')
-            input("Presione Enter para continuar...")
-            body_code.append(cpp_code)
-            self.banderaFunctioncall = False
+        for item in cpp_code.tail:
+            if self.banderaArithmetic and item != None and not self.banderaConditional:
+                body_code.append(f"std::cout << {item} << std::endl;")
+                self.banderaArithmetic = False
+            elif self.banderaConditional and item != None and not self.banderaFunctioncall:
+                body_code.append(item)
+                self.banderaConditional = False
+            elif self.banderaFunctioncall and item != None:
+                body_code.append(f"std::cout << {item} << std::endl;")
+                self.banderaFunctioncall = False
+        #print(f'body_code: {body_code}')
 
         # Se genera el código C++ para el cuerpo del programa
         main_body = "\n    ".join(body_code)
         main_function = f"int main() {{\n    {main_body}\n    return 0;\n}}"
         self.output.append(main_function)
-    
-    # Esta función procesa las expresiones del árbol de parseo
-    def process_expression(self, tree):
-        if hasattr(tree, 'head'):
-            method_name = tree.head
-            method = getattr(self, method_name, None)
-            if method:
-                return method(tree)
-            else:
-                return "\n".join(self.process_expression(child) for child in tree.tail)
-        elif isinstance(tree, str):
-            return tree
-        else:
-            return str(tree)  # Como último recurso
+
 
     # Esta función obtiene el código C++ generado
     def obtenerCpp(self):
         return "\n".join(self.output)
+    
+    # Esta función procesa las expresiones del árbol de parseo 
+    def evaluate(self, tree):
+        if hasattr(tree, 'head'):
+            method = getattr(self, tree.head, None)
+            if method:
+                return method(tree)
+        return tree
     
     # Esta función asegura que las líneas de código terminen en ';'
     def ensure_semicolon(self, code):
@@ -151,16 +156,18 @@ class CPPCodeGenerator(STransformer):
 
 # Función principal
 def main():
-    # Carga la gramática y parsea el archivo
+    # Se imprime la presentación del programa
     presentacion()
+
+    # Se carga la gramática y parsea el archivo
     with open('Kaleidoscope.g', 'r') as archivoGramatica:
-        with open('arith.kl', 'r') as archivoKL:
+        with open('sumafuncion.kl', 'r') as archivoKL:
             gramatica = plyplus.Grammar(archivoGramatica)
             codigoFuente = archivoKL.read()
             print("Código de entrada Kaleidoscope:")
             print(codigoFuente)
 
-            # Parsea el código fuente
+            # Se parsea el código fuente
             arbolParse = gramatica.parse(codigoFuente)
 
             print("\nÁrbol de parseo en forma pretty:")
@@ -175,12 +182,11 @@ def main():
             generador.transform(arbolParse)
             codigo_cpp = generador.obtenerCpp()
 
-            
             # Se guarda en un archivo el código C++ generado
             with open('output.cpp', 'w') as archivoSalida:
                 archivoSalida.write(codigo_cpp)
 
-            print("\nCódigo C++ generado:")
+            print("\nCÓDIGO C++ GENERADO:\n         |\n         V\n")
             print(codigo_cpp)
             
 if __name__ == '__main__':

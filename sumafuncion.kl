@@ -1,3 +1,3 @@
-def sumafuncion(x) { x + 3}
+def sumafuncion(x, y, z) { x + y + z}
 
-sumafuncion(8)
+sumafuncion(8, 3, 4)
