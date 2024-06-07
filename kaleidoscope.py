@@ -61,7 +61,7 @@ class CPPCodeGenerator(STransformer):
         body = self.ensure_semicolon(tree.tail[-1])  # Se asegura que el cuerpo termine en ';'
 
         # Se genera el código C++ para la definición de la función
-        cpp_code = f"int {func_name}({', '.join(params)}) {{\n{body}\n}}"
+        cpp_code = f"int {func_name}({', '.join(params)}) {{\n{body}\n}}\n"
         self.output.append(cpp_code)
     
     # Esta función procesa las llamadas a funciones
@@ -112,14 +112,17 @@ class CPPCodeGenerator(STransformer):
     # Esta función procesa el cuerpo del programa
     def program(self, cpp_code):
         body_code = []
+        headers = '#include <iostream>\n'
         for item in cpp_code.tail:
             if self.banderaArithmetic and item != None and not self.banderaConditional:
+                self.output.append(headers)
                 body_code.append(f"std::cout << {item} << std::endl;")
                 self.banderaArithmetic = False
             elif self.banderaConditional and item != None and not self.banderaFunctioncall:
                 body_code.append(item)
                 self.banderaConditional = False
             elif self.banderaFunctioncall and item != None:
+                self.output.append(headers)
                 body_code.append(f"std::cout << {item} << std::endl;")
                 self.banderaFunctioncall = False
         #print(f'body_code: {body_code}')

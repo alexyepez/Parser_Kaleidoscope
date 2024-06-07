@@ -1,7 +1,10 @@
-int sumafuncion(int x, int y, int z) {
-x + y + z;
+int sumafuncion(int x) {
+x + 3;
 }
+
+#include <iostream>
+
 int main() {
-    std::cout << sumafuncion(8, 3, 4) << std::endl;
+    std::cout << sumafuncion(8) << std::endl;
     return 0;
 }
