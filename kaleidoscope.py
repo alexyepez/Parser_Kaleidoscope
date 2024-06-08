@@ -173,8 +173,8 @@ def main():
             # Se parsea el código fuente
             arbolParse = gramatica.parse(codigoFuente)
 
-            print("\nÁrbol de parseo en forma pretty:")
-            print(arbolParse.pretty())
+            print("\nÁrbol de parseo:")
+            print(arbolParse)
             input("Presione Enter para continuar...")
 
             # Se genera y se guarda el árbol en formato PNG

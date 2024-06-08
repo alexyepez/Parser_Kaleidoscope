@@ -1,4 +1,6 @@
-
+def resta (a,b) {
+	a - b
+}
 def factorial(n) {
 	if (n == 0) { 
 		1 
